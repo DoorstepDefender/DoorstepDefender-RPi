@@ -18,8 +18,15 @@ add_executable(${PROJECT_NAME} ${DD_SOURCES})
 
 target_include_directories(${PROJECT_NAME} PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include/")
 
+set(THREADS_PREFER_PTHREAD_FLAG ON)
+find_package(Threads REQUIRED)
+if(NOT Threads_FOUND)
+  message(FATAL_ERROR "Pthread not found.")
+endif()
+
+target_link_libraries(${PROJECT_NAME} PUBLIC Threads::Threads)
+
 set(DD_THIRDPARTY_DIR "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty")
 
 add_subdirectory("${DD_THIRDPARTY_DIR}/fmt")
-
 target_link_libraries(${PROJECT_NAME} PUBLIC fmt::fmt)

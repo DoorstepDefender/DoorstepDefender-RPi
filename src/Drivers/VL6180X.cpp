@@ -6,6 +6,7 @@
 #include <cerrno>
 #include <fmt/core.h>
 
+// My favorite register addresses :D
 #define REG_IDENTIFICATION_MODEL_ID 0x00
 #define REG_SYSTEM_FRESH_OUT_OF_RESET 0x0016
 #define REG_RESULT_RANGE_STATUS 0x004d
@@ -18,20 +19,37 @@ VL6180X::VL6180X(int adapter_nr, uint8_t addr) {
   std::string filename = fmt::format("/dev/i2c-{}", adapter_nr);
   
   i2c_fd = open(filename.c_str(), O_RDWR);
-  connected = i2c_fd != -1;
-  if (!connected) {
-    fmt::print("Failed to open I2C device at '{}'\n\t{}\n", filename, strerror(errno));
+  connected = true;
+  if (i2c_fd < 0) {
+    connected = false;
+    fmt::print("VL6180X: Failed to open I2C device at '{}'\n\t{}\n", filename, strerror(errno));
     return;
   }
   else {
-    fmt::print("Successfully opened I2C device at '{}'\n", filename);
+    fmt::print("VL6180X: Successfully opened I2C device at '{}'\n", filename);
   }
   
-  if (ioctl(i2c_fd, I2C_SLAVE, addr) == -1) {
+  if (ioctl(i2c_fd, I2C_SLAVE, addr) < 0) {
     connected = false;
-    fmt::print("Failed to acquire I2C bus address and/or talk to slave.\n\t{}\n", strerror(errno));
+    fmt::print("VL6180X: Failed to acquire I2C bus address and/or talk to slave.\n\t{}\n", strerror(errno));
     return;
   }
+  
+  // Check model id.
+  if (read_register(REG_IDENTIFICATION_MODEL_ID) != 0xB4) {
+    connected = false;
+    fmt::print("VL6180X: Invalid I2C Model ID\n");
+    return;
+  }
+  
+  // Read SYSTEM__FRESH_OUT_OF_RESET register.
+  if (!(read_register(REG_SYSTEM_FRESH_OUT_OF_RESET) & 0x01)) {
+      // Ideally we'd reset the device by applying logic '0' to GPIO0, but we can't without that wired up.
+    fmt::print("VL6180X: Not fresh out of reset\n");
+    return;
+  }
+  
+  write_register(REG_SYSTEM_FRESH_OUT_OF_RESET, 0x00);
   
   // Apply the tuning settings.
   write_register(0x0207, 0x01);
@@ -77,11 +95,12 @@ VL6180X::VL6180X(int adapter_nr, uint8_t addr) {
 }
 
 VL6180X::~VL6180X() {
+  if (connected) close(i2c_fd);
 }
 
 uint8_t VL6180X::get_range() {
   if (!connected) return 0xFF;
-
+  
   if (!is_measuring) {
     uint8_t status = read_register(REG_RESULT_RANGE_STATUS);
     // Read range status register.
@@ -92,10 +111,10 @@ uint8_t VL6180X::get_range() {
       is_measuring = true;
     }
     else {
-      fmt::print("VL6180X_ToF 0x4d Status Error {}", status);
+      fmt::print("VL6180X_ToF 0x4d Status Error {}\n", status);
     }
   }
-
+  
   if (is_measuring) {
     if ((read_register(REG_RESULT_INTERRUPT_STATUS_GPIO) & 0x04) == 0x04) {
       // Read range register (mm).
@@ -117,15 +136,13 @@ uint8_t VL6180X::read_register(uint16_t reg) {
   uint8_t buffer[3];
   buffer[0] = uint8_t(reg >> 8);
   buffer[1] = uint8_t(reg & 0xFF);
-
+  buffer[2] = 0;
+  
   // Prompt the sensor with the address to read.
   write(i2c_fd, buffer, 2);
-
+  
   // Read the value at the address.
-  bool res = read(i2c_fd, &buffer[2], 1);
-  if (res) {
-    fmt::print("Failed to read from register {}\n", reg);
-  }
+  read(i2c_fd, &buffer[2], 1);
   return buffer[2];
 }
 
@@ -133,13 +150,11 @@ void VL6180X::write_register(uint16_t reg, uint8_t data) {
   if (!connected) return;
   
   uint8_t buffer[3];
-
+  
   buffer[0] = uint8_t(reg >> 8);
   buffer[1] = uint8_t(reg & 0xFF);
   buffer[2] = data;
-
+  
   // Write data to register at address.
-  if (write(i2c_fd, buffer, 3) != 3) {
-    fmt::print("Failed to write to register {}\n", reg);
-  }
+  write(i2c_fd, buffer, 3);
 }

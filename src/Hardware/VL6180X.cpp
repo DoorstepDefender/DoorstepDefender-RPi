@@ -1,4 +1,4 @@
-#include <DoorstepDefender/Drivers/VL6180X.h>
+#include <DoorstepDefender/Hardware/VL6180X.h>
 #include <iostream>
 #include <fcntl.h>
 #include <cstdio>

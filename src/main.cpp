@@ -1,5 +1,6 @@
 #include <DoorstepDefender/Hardware/VL6180X.h>
 #include <DoorstepDefender/Bluetooth/BluetoothHandler.h>
+#include <DoorstepDefender/Audio/AudioHandler.h>
 #include <iostream>
 #include <fmt/core.h>
 #include <thread>
@@ -12,6 +13,8 @@ int main() {
 
   BluetoothHandler bt;
 
+  AudioHandler aud("audio.mp3");
+
   while (true) {
     std::this_thread::sleep_for(50ms);
     uint8_t range = tof.get_range();
@@ -23,6 +26,7 @@ int main() {
     else if (range >= 40 && was_on_porch) {
       fmt::print("Package left\n");
       bt.send_status(BluetoothHandler::StatusMessage::GONE);
+      aud.play_audio();
       was_on_porch = false;
     }
   }

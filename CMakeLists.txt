@@ -26,7 +26,7 @@ endif()
 
 target_link_libraries(${PROJECT_NAME} PUBLIC Threads::Threads)
 
-target_link_libraries(${PROJECT_NAME} PUBLIC bluetooth)
+target_link_libraries(${PROJECT_NAME} PUBLIC bluetooth mpg123 ao)
 
 set(DD_THIRDPARTY_DIR "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty")
 

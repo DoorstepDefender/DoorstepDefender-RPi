@@ -26,6 +26,8 @@ endif()
 
 target_link_libraries(${PROJECT_NAME} PUBLIC Threads::Threads)
 
+target_link_libraries(${PROJECT_NAME} PUBLIC bluetooth)
+
 set(DD_THIRDPARTY_DIR "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty")
 
 add_subdirectory("${DD_THIRDPARTY_DIR}/fmt")

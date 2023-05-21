@@ -1,4 +1,8 @@
 #include <DoorstepDefender/Hardware/VL6180X.h>
+#include <linux/i2c.h>
+#include <linux/i2c-dev.h>
+#include <sys/ioctl.h>
+#include <unistd.h>
 #include <iostream>
 #include <fcntl.h>
 #include <cstdio>
